@@ -1,5 +1,3 @@
-import 'package:sqflite/sqflite.dart';
-
 import '../db/app_database.dart';
 import '../models/user.dart';
 
@@ -8,43 +6,32 @@ class UserService {
     required String username,
     required String password,
   }) async {
-    final db = await AppDatabase.instance.database;
-    final rows = await db.query(
-      'users',
-      where: 'username = ? AND password = ?',
-      whereArgs: [username, password],
-      limit: 1,
-    );
+    final rows = await AppDatabase.instance.readList(AppDatabase.usersKey);
+    for (final row in rows) {
+      final user = User.fromMap(row);
+      if (user.username == username && user.password == password) {
+        return user;
+      }
+    }
 
-    if (rows.isEmpty) return null;
-    return User.fromMap(rows.first);
+    return null;
   }
 
   Future<bool> isUsernameTaken(String username) async {
-    final db = await AppDatabase.instance.database;
-    final rows = await db.query(
-      'users',
-      columns: ['id'],
-      where: 'username = ?',
-      whereArgs: [username],
-      limit: 1,
-    );
-
-    return rows.isNotEmpty;
+    final rows = await AppDatabase.instance.readList(AppDatabase.usersKey);
+    return rows.any((row) => row['username'] == username);
   }
 
   Future<int> register(User user) async {
-    final db = await AppDatabase.instance.database;
-
-    try {
-      return await db.insert('users', user.toMap());
-    } on DatabaseException catch (error) {
-      if (error.isUniqueConstraintError()) {
-        throw const UserServiceException('Username already exists');
-      }
-
-      rethrow;
+    if (await isUsernameTaken(user.username)) {
+      throw const UserServiceException('Username already exists');
     }
+
+    final rows = await AppDatabase.instance.readList(AppDatabase.usersKey);
+    final id = await AppDatabase.instance.nextId(AppDatabase.userCounterKey);
+    rows.add(user.copyWith(id: id).toMap());
+    await AppDatabase.instance.writeList(AppDatabase.usersKey, rows);
+    return id;
   }
 }
 

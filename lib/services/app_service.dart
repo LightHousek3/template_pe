@@ -10,52 +10,44 @@ class AppService {
     String? category,
     bool? completed,
   }) async {
-    final db = await AppDatabase.instance.database;
-    final whereParts = <String>['createdBy = ?'];
-    final whereArgs = <Object?>[userId];
     final keyword = searchText.trim();
+    final rows = await AppDatabase.instance.readList(AppDatabase.artworksKey);
+    final artworks = rows
+        .map(Artwork.fromMap)
+        .where((artwork) => artwork.createdBy == userId)
+        .where((artwork) {
+          if (keyword.isEmpty) return true;
+          final normalizedKeyword = keyword.toLowerCase();
+          return artwork.title.toLowerCase().contains(normalizedKeyword) ||
+              artwork.category.toLowerCase().contains(normalizedKeyword);
+        })
+        .where((artwork) => category == null || artwork.category == category)
+        .where((artwork) => completed == null || artwork.completed == completed)
+        .toList()
+      ..sort((a, b) => (b.id ?? 0).compareTo(a.id ?? 0));
 
-    if (keyword.isNotEmpty) {
-      whereParts.add('(LOWER(title) LIKE ? OR LOWER(category) LIKE ?)');
-      final like = '%${keyword.toLowerCase()}%';
-      whereArgs.addAll([like, like]);
-    }
-
-    if (category != null && category.isNotEmpty) {
-      whereParts.add('category = ?');
-      whereArgs.add(category);
-    }
-
-    if (completed != null) {
-      whereParts.add('completed = ?');
-      whereArgs.add(completed ? 1 : 0);
-    }
-
-    final rows = await db.query(
-      table,
-      where: whereParts.join(' AND '),
-      whereArgs: whereArgs,
-      orderBy: 'id DESC',
-    );
-
-    return rows.map(Artwork.fromMap).toList();
+    return artworks;
   }
 
   Future<int> add(Artwork artwork) async {
-    final db = await AppDatabase.instance.database;
-    return db.insert(table, artwork.toMap());
+    final rows = await AppDatabase.instance.readList(AppDatabase.artworksKey);
+    final id = await AppDatabase.instance.nextId(
+      AppDatabase.artworkCounterKey,
+    );
+    rows.add(artwork.copyWith(id: id).toMap());
+    await AppDatabase.instance.writeList(AppDatabase.artworksKey, rows);
+    return id;
   }
 
   Future<void> update(Artwork artwork) async {
     if (artwork.id == null) return;
 
-    final db = await AppDatabase.instance.database;
-    await db.update(
-      table,
-      artwork.toMap()..remove('id'),
-      where: 'id = ?',
-      whereArgs: [artwork.id],
-    );
+    final rows = await AppDatabase.instance.readList(AppDatabase.artworksKey);
+    final index = rows.indexWhere((row) => row['id'] == artwork.id);
+    if (index == -1) return;
+
+    rows[index] = artwork.toMap();
+    await AppDatabase.instance.writeList(AppDatabase.artworksKey, rows);
   }
 
   Future<void> toggleCompleted(Artwork artwork) async {
@@ -63,7 +55,8 @@ class AppService {
   }
 
   Future<void> delete(int id) async {
-    final db = await AppDatabase.instance.database;
-    await db.delete(table, where: 'id = ?', whereArgs: [id]);
+    final rows = await AppDatabase.instance.readList(AppDatabase.artworksKey);
+    rows.removeWhere((row) => row['id'] == id);
+    await AppDatabase.instance.writeList(AppDatabase.artworksKey, rows);
   }
 }

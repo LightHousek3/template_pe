@@ -13,6 +13,22 @@ class User {
   final String password;
   final String createdAt;
 
+  User copyWith({
+    int? id,
+    String? username,
+    String? email,
+    String? password,
+    String? createdAt,
+  }) {
+    return User(
+      id: id ?? this.id,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      password: password ?? this.password,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
+
   Map<String, Object?> toMap() {
     return {
       'id': id,
