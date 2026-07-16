@@ -1,99 +1,64 @@
+import 'dart:io';
+
+import 'package:drift/drift.dart';
+import 'package:drift/native.dart';
 import 'package:path/path.dart';
-import 'package:sqflite/sqflite.dart';
+import 'package:path_provider/path_provider.dart';
 
-import 'database_factory_provider.dart';
-
-class AppDatabase {
-  AppDatabase._();
+class AppDatabase extends GeneratedDatabase {
+  AppDatabase._() : super(_openConnection());
 
   static final AppDatabase instance = AppDatabase._();
 
-  static const String _dbName = 'art_gallery_manager.db';
-  static const int _dbVersion = 2;
+  @override
+  int get schemaVersion => 1;
 
-  Database? _database;
+  @override
+  Iterable<TableInfo<Table, Object?>> get allTables => const [];
 
-  Future<Database> get database async {
-    if (_database != null) {
-      return _database!;
-    }
+  @override
+  List<DatabaseSchemaEntity> get allSchemaEntities => const [];
 
-    _database = await _openDatabase();
+  Future<void> createSchema() async {
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS users(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL,
+        password TEXT NOT NULL,
+        createdAt TEXT NOT NULL
+      )
+    ''');
 
-    return _database!;
-  }
-
-  Future<Database> _openDatabase() async {
-    final factory = DatabaseFactoryProvider.instance;
-
-    final dbPath = await factory.getDatabasesPath();
-
-    final path = join(dbPath, _dbName);
-
-    return await factory.openDatabase(
-      path,
-      options: OpenDatabaseOptions(
-        version: _dbVersion,
-
-        onConfigure: (db) async {
-          // Enable Foreign Key
-          await db.execute('PRAGMA foreign_keys = ON');
-        },
-
-        onCreate: (db, version) async {
-          await db.execute('''
-            CREATE TABLE users(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              username TEXT NOT NULL UNIQUE,
-              email TEXT NOT NULL,
-              password TEXT NOT NULL,
-              createdAt TEXT NOT NULL
-            )
-          ''');
-
-          await db.execute('''
-            CREATE TABLE artworks(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              title TEXT NOT NULL,
-              artist TEXT NOT NULL,
-              year TEXT NOT NULL,
-              category TEXT NOT NULL,
-              description TEXT NOT NULL,
-              completed INTEGER NOT NULL DEFAULT 0,
-              createdBy INTEGER NOT NULL,
-              FOREIGN KEY(createdBy) REFERENCES users(id) ON DELETE CASCADE
-            )
-          ''');
-        },
-
-        onUpgrade: (db, oldVersion, newVersion) async {
-          if (oldVersion < 2) {
-            await db.execute(
-              'ALTER TABLE artworks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0',
-            );
-          }
-        },
-
-        onDowngrade: onDatabaseDowngradeDelete,
-      ),
-    );
-  }
-
-  Future<void> close() async {
-    await _database?.close();
-
-    _database = null;
+    await customStatement('''
+      CREATE TABLE IF NOT EXISTS artworks(
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        artist TEXT NOT NULL,
+        year TEXT NOT NULL,
+        category TEXT NOT NULL,
+        description TEXT NOT NULL,
+        completed INTEGER NOT NULL DEFAULT 0,
+        createdBy INTEGER NOT NULL,
+        FOREIGN KEY(createdBy) REFERENCES users(id) ON DELETE CASCADE
+      )
+    ''');
   }
 
   Future<void> deleteDatabaseFile() async {
-    final factory = DatabaseFactoryProvider.instance;
-
-    final dbPath = await factory.getDatabasesPath();
-
-    final path = join(dbPath, _dbName);
-
     await close();
-
-    await factory.deleteDatabase(path);
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File(join(directory.path, 'art_gallery_manager_drift.db'));
+    if (await file.exists()) {
+      await file.delete();
+    }
   }
+}
+
+LazyDatabase _openConnection() {
+  return LazyDatabase(() async {
+    final directory = await getApplicationDocumentsDirectory();
+    final file = File(join(directory.path, 'art_gallery_manager_drift.db'));
+    return NativeDatabase.createInBackground(file);
+  });
 }

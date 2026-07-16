@@ -1,3 +1,5 @@
+import 'package:drift/drift.dart';
+
 import '../db/app_database.dart';
 import '../models/artwork.dart';
 
@@ -10,51 +12,74 @@ class AppService {
     String? category,
     bool? completed,
   }) async {
-    final db = await AppDatabase.instance.database;
     final whereParts = <String>['createdBy = ?'];
-    final whereArgs = <Object?>[userId];
+    final variables = <Variable>[Variable.withInt(userId)];
     final keyword = searchText.trim();
 
     if (keyword.isNotEmpty) {
       whereParts.add('(LOWER(title) LIKE ? OR LOWER(category) LIKE ?)');
       final like = '%${keyword.toLowerCase()}%';
-      whereArgs.addAll([like, like]);
+      variables.addAll([Variable.withString(like), Variable.withString(like)]);
     }
 
     if (category != null && category.isNotEmpty) {
       whereParts.add('category = ?');
-      whereArgs.add(category);
+      variables.add(Variable.withString(category));
     }
 
     if (completed != null) {
       whereParts.add('completed = ?');
-      whereArgs.add(completed ? 1 : 0);
+      variables.add(Variable.withInt(completed ? 1 : 0));
     }
 
-    final rows = await db.query(
-      table,
-      where: whereParts.join(' AND '),
-      whereArgs: whereArgs,
-      orderBy: 'id DESC',
-    );
+    final rows = await AppDatabase.instance
+        .customSelect(
+          'SELECT * FROM $table WHERE ${whereParts.join(' AND ')} ORDER BY id DESC',
+          variables: variables,
+          readsFrom: const {},
+        )
+        .get();
 
-    return rows.map(Artwork.fromMap).toList();
+    return rows.map((row) => Artwork.fromMap(row.data)).toList();
   }
 
   Future<int> add(Artwork artwork) async {
-    final db = await AppDatabase.instance.database;
-    return db.insert(table, artwork.toMap());
+    return AppDatabase.instance.customInsert(
+      '''
+      INSERT INTO $table(title, artist, year, category, description, completed, createdBy)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      ''',
+      variables: [
+        Variable.withString(artwork.title),
+        Variable.withString(artwork.artist),
+        Variable.withString(artwork.year),
+        Variable.withString(artwork.category),
+        Variable.withString(artwork.description),
+        Variable.withInt(artwork.completed ? 1 : 0),
+        Variable.withInt(artwork.createdBy),
+      ],
+    );
   }
 
   Future<void> update(Artwork artwork) async {
     if (artwork.id == null) return;
 
-    final db = await AppDatabase.instance.database;
-    await db.update(
-      table,
-      artwork.toMap()..remove('id'),
-      where: 'id = ?',
-      whereArgs: [artwork.id],
+    await AppDatabase.instance.customUpdate(
+      '''
+      UPDATE $table
+      SET title = ?, artist = ?, year = ?, category = ?, description = ?, completed = ?, createdBy = ?
+      WHERE id = ?
+      ''',
+      variables: [
+        Variable.withString(artwork.title),
+        Variable.withString(artwork.artist),
+        Variable.withString(artwork.year),
+        Variable.withString(artwork.category),
+        Variable.withString(artwork.description),
+        Variable.withInt(artwork.completed ? 1 : 0),
+        Variable.withInt(artwork.createdBy),
+        Variable.withInt(artwork.id!),
+      ],
     );
   }
 
@@ -63,7 +88,9 @@ class AppService {
   }
 
   Future<void> delete(int id) async {
-    final db = await AppDatabase.instance.database;
-    await db.delete(table, where: 'id = ?', whereArgs: [id]);
+    await AppDatabase.instance.customUpdate(
+      'DELETE FROM $table WHERE id = ?',
+      variables: [Variable.withInt(id)],
+    );
   }
 }
