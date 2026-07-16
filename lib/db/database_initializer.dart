@@ -1,7 +1,7 @@
-import 'dart:io';
-
 import 'package:flutter/foundation.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+
+import 'app_database.dart';
 
 class DatabaseInitializer {
   DatabaseInitializer._();
@@ -12,29 +12,14 @@ class DatabaseInitializer {
     if (_initialized) return;
 
     try {
-      if (kIsWeb) {
-        throw UnsupportedError('sqflite is not supported on Flutter Web.');
-      }
-
-      if (_isDesktop) {
-        debugPrint('Desktop platform detected.');
-        debugPrint('Initializing SQLite FFI...');
-
-        sqfliteFfiInit();
-
-        debugPrint('SQLite FFI initialized.');
-      } else {
-        debugPrint('Using native sqflite.');
-      }
-
+      await Hive.initFlutter();
+      await AppDatabase.instance.usersBox;
+      await AppDatabase.instance.artworksBox;
+      await AppDatabase.instance.countersBox;
       _initialized = true;
     } catch (e) {
-      debugPrint('Database initialization failed: $e');
-
+      debugPrint('Hive initialization failed: $e');
       rethrow;
     }
   }
-
-  static bool get _isDesktop =>
-      Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 }
