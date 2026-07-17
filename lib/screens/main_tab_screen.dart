@@ -43,13 +43,10 @@ class _MainTabScreenState extends State<MainTabScreen> {
         index: _selectedIndex,
         children: [
           HomeScreen(
-            userId: EntityConfig.defaultUserId,
-            username: EntityConfig.defaultUsername,
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,
           ),
           SummaryScreen(
-            userId: EntityConfig.defaultUserId,
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,
           ),

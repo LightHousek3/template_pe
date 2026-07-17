@@ -10,12 +10,10 @@ import 'detail_screen.dart';
 class SummaryScreen extends StatefulWidget {
   const SummaryScreen({
     super.key,
-    required this.userId,
     required this.refreshRevision,
     required this.onDataChanged,
   });
 
-  final int userId;
   final int refreshRevision;
   final VoidCallback onDataChanged;
 
@@ -45,9 +43,9 @@ class _SummaryScreenState extends State<SummaryScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    final summary = await _appService.getSummary(widget.userId);
+    final summary = await _appService.getSummary(EntityConfig.defaultUserId);
     final favoriteList = await _appService.findByUser(
-      widget.userId,
+      EntityConfig.defaultUserId,
       favorite: true,
     );
 

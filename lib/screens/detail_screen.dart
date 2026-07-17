@@ -104,7 +104,12 @@ class _DetailScreenState extends State<DetailScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        if (!didPop) _close();
+        if (didPop) return;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) {
+            _close();
+          }
+        });
       },
       child: Scaffold(
         appBar: AppBar(
