@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import '../models/artwork.dart';
 import '../screens/detail_screen.dart';
 
-class ArtworkList extends StatelessWidget {
-  const ArtworkList({
+class DataList extends StatelessWidget {
+  const DataList({
     super.key,
-    required this.artworks,
+    required this.list,
     required this.isLoading,
     required this.emptyMessage,
     required this.onToggleCompleted,
@@ -14,7 +14,7 @@ class ArtworkList extends StatelessWidget {
     this.onDelete,
   });
 
-  final List<Artwork> artworks;
+  final List<Artwork> list;
   final bool isLoading;
   final String emptyMessage;
   final ValueChanged<Artwork> onToggleCompleted;
@@ -27,14 +27,14 @@ class ArtworkList extends StatelessWidget {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (artworks.isEmpty) {
+    if (list.isEmpty) {
       return Center(child: Text(emptyMessage));
     }
 
     return ListView.builder(
-      itemCount: artworks.length,
+      itemCount: list.length,
       itemBuilder: (context, index) {
-        final artwork = artworks[index];
+        final artwork = list[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           elevation: 0,
