@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../routes/app_routes.dart';
-import '../services/session_service.dart';
+import '../screens/main_tab_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,8 +10,6 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  final _sessionService = SessionService();
-
   @override
   void initState() {
     super.initState();
@@ -20,12 +17,11 @@ class _SplashScreenState extends State<SplashScreen> {
   }
 
   Future<void> _openInitialScreen() async {
-    final userId = await _sessionService.getUserId();
     if (!mounted) return;
 
-    Navigator.pushReplacementNamed(
+    Navigator.pushReplacement(
       context,
-      userId == null ? AppRoutes.login : AppRoutes.home,
+      MaterialPageRoute(builder: (_) => const MainTabScreen()),
     );
   }
 
