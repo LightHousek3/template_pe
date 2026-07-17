@@ -10,14 +10,10 @@ import 'detail_screen.dart';
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
-    required this.userId,
-    required this.username,
     required this.refreshRevision,
     required this.onDataChanged,
   });
 
-  final int userId;
-  final String? username;
   final int refreshRevision;
   final VoidCallback onDataChanged;
 
@@ -56,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final dataList = await _appService.findByUser(
-      widget.userId,
+      EntityConfig.defaultUserId,
       searchText: _searchController.text,
       category: _selectedCategory,
       yearFilter: _selectedYearFilter,
@@ -87,7 +83,7 @@ class _HomeScreenState extends State<HomeScreen> {
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
         child: Column(
           children: [
-            AppBanner(username: widget.username),
+            const AppBanner(username: EntityConfig.defaultUsername),
             const SizedBox(height: 16),
             _SearchAndFilterBar(
               controller: _searchController,
