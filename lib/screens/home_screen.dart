@@ -5,7 +5,7 @@ import '../models/artwork.dart';
 import '../services/app_service.dart';
 import '../widgets/data_list.dart';
 import '../widgets/banner.dart';
-import 'add_screen.dart';
+import 'detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({
@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Artwork> _list = [];
   bool _isLoading = true;
   String? _selectedCategory;
+  String _selectedYearFilter = EntityConfig.yearFilterAll;
 
   @override
   void initState() {
@@ -58,6 +59,7 @@ class _HomeScreenState extends State<HomeScreen> {
       widget.userId,
       searchText: _searchController.text,
       category: _selectedCategory,
+      yearFilter: _selectedYearFilter,
     );
 
     if (!mounted) return;
@@ -67,59 +69,15 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _delete(Artwork artwork) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Delete Artwork'),
-          content: const Text('Are you sure you want to delete this artwork?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel'),
-            ),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Delete'),
-            ),
-          ],
-        );
-      },
-    );
-
-    if (confirmed != true || artwork.id == null) return;
-
-    await _appService.delete(artwork.id!);
-    await _loadData();
-    widget.onDataChanged();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Artwork deleted successfully')),
-    );
-  }
-
-  Future<void> _toggleCompleted(Artwork artwork) async {
-    await _appService.toggleCompleted(artwork);
-    await _loadData();
-    widget.onDataChanged();
-  }
-
-  Future<void> _edit(Artwork artwork) async {
-    final updated = await Navigator.push<bool>(
+  Future<void> _openDetail(Artwork artwork) async {
+    final changed = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => AddScreen(artwork: artwork)),
+      MaterialPageRoute(builder: (_) => DetailScreen(artwork: artwork)),
     );
 
-    if (updated != true) return;
+    if (changed != true) return;
     await _loadData();
     widget.onDataChanged();
-
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Artwork updated successfully')),
-    );
   }
 
   @override
@@ -134,9 +92,15 @@ class _HomeScreenState extends State<HomeScreen> {
             _SearchAndFilterBar(
               controller: _searchController,
               selectedCategory: _selectedCategory,
+              selectedYearFilter: _selectedYearFilter,
               onSearchChanged: (_) => _loadData(),
               onCategoryChanged: (value) {
                 setState(() => _selectedCategory = value);
+                _loadData();
+              },
+              onYearFilterChanged: (value) {
+                if (value == null) return;
+                setState(() => _selectedYearFilter = value);
                 _loadData();
               },
             ),
@@ -146,9 +110,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 list: _list,
                 isLoading: _isLoading,
                 emptyMessage: 'No artworks found',
-                onToggleCompleted: _toggleCompleted,
-                onEdit: _edit,
-                onDelete: _delete,
+                onOpenDetail: _openDetail,
               ),
             ),
           ],
@@ -162,14 +124,18 @@ class _SearchAndFilterBar extends StatelessWidget {
   const _SearchAndFilterBar({
     required this.controller,
     required this.selectedCategory,
+    required this.selectedYearFilter,
     required this.onSearchChanged,
     required this.onCategoryChanged,
+    required this.onYearFilterChanged,
   });
 
   final TextEditingController controller;
   final String? selectedCategory;
+  final String selectedYearFilter;
   final ValueChanged<String> onSearchChanged;
   final ValueChanged<String?> onCategoryChanged;
+  final ValueChanged<String?> onYearFilterChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -178,31 +144,54 @@ class _SearchAndFilterBar extends StatelessWidget {
         TextField(
           controller: controller,
           decoration: const InputDecoration(
-            labelText: 'Search by title or category',
+            labelText: 'Search by title',
             prefixIcon: Icon(Icons.search),
           ),
           onChanged: onSearchChanged,
         ),
         const SizedBox(height: 10),
-        DropdownButtonFormField<String?>(
-          initialValue: selectedCategory,
-          decoration: const InputDecoration(
-            labelText: 'Filter by category',
-            prefixIcon: Icon(Icons.filter_list),
-          ),
-          items: [
-            const DropdownMenuItem<String?>(
-              value: null,
-              child: Text('All categories'),
+        Row(
+          children: [
+            Expanded(
+              child: DropdownButtonFormField<String?>(
+                initialValue: selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  prefixIcon: Icon(Icons.category_outlined),
+                ),
+                items: [
+                  const DropdownMenuItem<String?>(
+                    value: null,
+                    child: Text('All categories'),
+                  ),
+                  ...EntityConfig.categories.map(
+                    (category) => DropdownMenuItem<String?>(
+                      value: category,
+                      child: Text(category),
+                    ),
+                  ),
+                ],
+                onChanged: onCategoryChanged,
+              ),
             ),
-            ...EntityConfig.categories.map(
-              (category) => DropdownMenuItem<String?>(
-                value: category,
-                child: Text(category),
+            const SizedBox(width: 10),
+            Expanded(
+              child: DropdownButtonFormField<String>(
+                initialValue: selectedYearFilter,
+                decoration: const InputDecoration(
+                  labelText: 'Year',
+                  prefixIcon: Icon(Icons.filter_list),
+                ),
+                items: EntityConfig.yearFilters
+                    .map(
+                      (filter) =>
+                          DropdownMenuItem(value: filter, child: Text(filter)),
+                    )
+                    .toList(),
+                onChanged: onYearFilterChanged,
               ),
             ),
           ],
-          onChanged: onCategoryChanged,
         ),
       ],
     );

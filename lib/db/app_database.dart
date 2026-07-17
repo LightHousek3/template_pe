@@ -9,7 +9,7 @@ class AppDatabase {
   static final AppDatabase instance = AppDatabase._();
 
   static const String _dbName = 'art_gallery_manager.db';
-  static const int _dbVersion = 2;
+  static const int _dbVersion = 3;
 
   Database? _database;
 
@@ -60,6 +60,7 @@ class AppDatabase {
               category TEXT NOT NULL,
               description TEXT NOT NULL,
               completed INTEGER NOT NULL DEFAULT 0,
+              favorite INTEGER NOT NULL DEFAULT 0,
               createdBy INTEGER NOT NULL,
               FOREIGN KEY(createdBy) REFERENCES users(id) ON DELETE CASCADE
             )
@@ -70,6 +71,11 @@ class AppDatabase {
           if (oldVersion < 2) {
             await db.execute(
               'ALTER TABLE artworks ADD COLUMN completed INTEGER NOT NULL DEFAULT 0',
+            );
+          }
+          if (oldVersion < 3) {
+            await db.execute(
+              'ALTER TABLE artworks ADD COLUMN favorite INTEGER NOT NULL DEFAULT 0',
             );
           }
         },

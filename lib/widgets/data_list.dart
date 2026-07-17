@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../config/entity_config.dart';
 import '../models/artwork.dart';
-import '../screens/detail_screen.dart';
 
 class DataList extends StatelessWidget {
   const DataList({
@@ -9,17 +9,13 @@ class DataList extends StatelessWidget {
     required this.list,
     required this.isLoading,
     required this.emptyMessage,
-    required this.onToggleCompleted,
-    this.onEdit,
-    this.onDelete,
+    required this.onOpenDetail,
   });
 
   final List<Artwork> list;
   final bool isLoading;
   final String emptyMessage;
-  final ValueChanged<Artwork> onToggleCompleted;
-  final ValueChanged<Artwork>? onEdit;
-  final ValueChanged<Artwork>? onDelete;
+  final ValueChanged<Artwork> onOpenDetail;
 
   @override
   Widget build(BuildContext context) {
@@ -34,55 +30,38 @@ class DataList extends StatelessWidget {
     return ListView.builder(
       itemCount: list.length,
       itemBuilder: (context, index) {
-        final artwork = list[index];
+        final item = list[index];
         return Card(
           margin: const EdgeInsets.only(bottom: 10),
           elevation: 0,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           child: ListTile(
-            leading: IconButton(
-              tooltip: artwork.completed ? 'Mark incomplete' : 'Mark complete',
-              onPressed: () => onToggleCompleted(artwork),
-              icon: Icon(
-                artwork.completed
-                    ? Icons.check_circle
-                    : Icons.radio_button_unchecked,
-              ),
+            leading: Icon(
+              item.favorite ? Icons.favorite : Icons.image_outlined,
+              color: item.favorite ? Colors.redAccent : null,
             ),
             title: Text(
-              artwork.title,
+              item.title,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(fontWeight: FontWeight.w600),
             ),
             subtitle: Text(
-              '${artwork.category} - ${artwork.artist} - ${artwork.year}',
+              // DOI NHANH: Lab4 hien category, amount, due_date, status.
+              // Lab5 hien category, price, status.
+              '${item.artist} - ${item.year} - ${item.category}',
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             ),
-            trailing: Wrap(
-              spacing: 4,
-              children: [
-                if (onEdit != null)
-                  IconButton(
-                    tooltip: 'Edit artwork',
-                    onPressed: () => onEdit!(artwork),
-                    icon: const Icon(Icons.edit_outlined),
-                  ),
-                if (onDelete != null)
-                  IconButton(
-                    tooltip: 'Delete artwork',
-                    onPressed: () => onDelete!(artwork),
-                    icon: const Icon(Icons.delete_outline),
-                  ),
-              ],
-            ),
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => ArtworkDetailScreen(artwork: artwork),
+            trailing: Chip(
+              visualDensity: VisualDensity.compact,
+              label: Text(
+                item.completed
+                    ? EntityConfig.statusOnLabel
+                    : EntityConfig.statusOffLabel,
               ),
             ),
+            onTap: () => onOpenDetail(item),
           ),
         );
       },

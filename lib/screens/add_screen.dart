@@ -67,6 +67,7 @@ class _AddScreenState extends State<AddScreen> {
       description: _descriptionController.text.trim(),
       createdBy: widget.artwork?.createdBy ?? userId,
       completed: widget.artwork?.completed ?? false,
+      favorite: widget.artwork?.favorite ?? false,
     );
 
     if (_isEditMode) {
@@ -115,6 +116,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4 doi thanh Bill Name, Lab5 doi thanh Item Name.
                         labelText: 'Title',
                         prefixIcon: Icon(Icons.title),
                       ),
@@ -124,6 +126,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _artistController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4/5 co the doi field nay thanh Amount/Price.
                         labelText: 'Artist',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
@@ -133,6 +136,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _yearController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4 doi thanh Due Date, Lab5 co the bo field nay.
                         labelText: 'Year',
                         prefixIcon: Icon(Icons.calendar_today_outlined),
                       ),
