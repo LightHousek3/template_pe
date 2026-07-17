@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../config/entity_config.dart';
 import '../models/artwork.dart';
 import '../services/app_service.dart';
-import '../services/session_service.dart';
 
 class AddScreen extends StatefulWidget {
   const AddScreen({super.key, this.artwork});
@@ -19,7 +18,6 @@ class _AddScreenState extends State<AddScreen> {
 
   final _formKey = GlobalKey<FormState>();
   final _artworkService = AppService();
-  final _sessionService = SessionService();
   final _titleController = TextEditingController();
   final _artistController = TextEditingController();
   final _yearController = TextEditingController();
@@ -53,9 +51,6 @@ class _AddScreenState extends State<AddScreen> {
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
-    final userId = await _sessionService.getUserId();
-    if (userId == null) return;
-
     setState(() => _isLoading = true);
 
     final artwork = Artwork(
@@ -65,7 +60,7 @@ class _AddScreenState extends State<AddScreen> {
       year: _yearController.text.trim(),
       category: _category,
       description: _descriptionController.text.trim(),
-      createdBy: widget.artwork?.createdBy ?? userId,
+      createdBy: widget.artwork?.createdBy ?? EntityConfig.defaultUserId,
       completed: widget.artwork?.completed ?? false,
       favorite: widget.artwork?.favorite ?? false,
     );
