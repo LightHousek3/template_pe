@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/entity_config.dart';
 import '../models/artwork.dart';
 import '../services/app_service.dart';
-import '../widgets/artwork_list.dart';
+import '../widgets/data_list.dart';
 import '../widgets/banner.dart';
 import 'add_screen.dart';
 
@@ -28,21 +28,21 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final _appService = AppService();
   final _searchController = TextEditingController();
-  List<Artwork> _artworks = [];
+  List<Artwork> _list = [];
   bool _isLoading = true;
   String? _selectedCategory;
 
   @override
   void initState() {
     super.initState();
-    _loadArtworks();
+    _loadData();
   }
 
   @override
   void didUpdateWidget(covariant HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.refreshRevision != widget.refreshRevision) {
-      _loadArtworks();
+      _loadData();
     }
   }
 
@@ -52,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     super.dispose();
   }
 
-  Future<void> _loadArtworks() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final dataList = await _appService.findByUser(
       widget.userId,
@@ -62,12 +62,12 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (!mounted) return;
     setState(() {
-      _artworks = dataList;
+      _list = dataList;
       _isLoading = false;
     });
   }
 
-  Future<void> _deleteArtwork(Artwork artwork) async {
+  Future<void> _delete(Artwork artwork) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -91,7 +91,7 @@ class _HomeScreenState extends State<HomeScreen> {
     if (confirmed != true || artwork.id == null) return;
 
     await _appService.delete(artwork.id!);
-    await _loadArtworks();
+    await _loadData();
     widget.onDataChanged();
 
     if (!mounted) return;
@@ -102,18 +102,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _toggleCompleted(Artwork artwork) async {
     await _appService.toggleCompleted(artwork);
-    await _loadArtworks();
+    await _loadData();
     widget.onDataChanged();
   }
 
-  Future<void> _editArtwork(Artwork artwork) async {
+  Future<void> _edit(Artwork artwork) async {
     final updated = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (_) => AddScreen(artwork: artwork)),
     );
 
     if (updated != true) return;
-    await _loadArtworks();
+    await _loadData();
     widget.onDataChanged();
 
     if (!mounted) return;
@@ -134,21 +134,21 @@ class _HomeScreenState extends State<HomeScreen> {
             _SearchAndFilterBar(
               controller: _searchController,
               selectedCategory: _selectedCategory,
-              onSearchChanged: (_) => _loadArtworks(),
+              onSearchChanged: (_) => _loadData(),
               onCategoryChanged: (value) {
                 setState(() => _selectedCategory = value);
-                _loadArtworks();
+                _loadData();
               },
             ),
             const SizedBox(height: 12),
             Expanded(
-              child: ArtworkList(
-                artworks: _artworks,
+              child: DataList(
+                list: _list,
                 isLoading: _isLoading,
                 emptyMessage: 'No artworks found',
                 onToggleCompleted: _toggleCompleted,
-                onEdit: _editArtwork,
-                onDelete: _deleteArtwork,
+                onEdit: _edit,
+                onDelete: _delete,
               ),
             ),
           ],

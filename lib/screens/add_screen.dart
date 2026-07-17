@@ -50,7 +50,7 @@ class _AddScreenState extends State<AddScreen> {
     super.dispose();
   }
 
-  Future<void> _saveArtwork() async {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final userId = await _sessionService.getUserId();
@@ -173,7 +173,7 @@ class _AddScreenState extends State<AddScreen> {
                     SizedBox(
                       height: 46,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveArtwork,
+                        onPressed: _isLoading ? null : _save,
                         child: Text(
                           _isLoading
                               ? 'Saving...'

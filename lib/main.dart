@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:slot14_sqflite/db/database_initializer.dart';
-import 'package:slot14_sqflite/routes/app_routes.dart';
-import 'package:slot14_sqflite/screens/splash_screen.dart';
+import './db/database_initializer.dart';
+import './routes/app_routes.dart';
+import './screens/splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -16,7 +16,6 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Art Gallery Manager',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF00897B)),
         scaffoldBackgroundColor: const Color(0xFFF4F8FA),

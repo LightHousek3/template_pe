@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../models/artwork.dart';
 import '../services/app_service.dart';
-import '../widgets/artwork_list.dart';
+import '../widgets/data_list.dart';
 
-class CompletedArtworkScreen extends StatefulWidget {
-  const CompletedArtworkScreen({
+class CompletedScreen extends StatefulWidget {
+  const CompletedScreen({
     super.key,
     required this.userId,
     required this.refreshRevision,
@@ -17,29 +17,29 @@ class CompletedArtworkScreen extends StatefulWidget {
   final VoidCallback onDataChanged;
 
   @override
-  State<CompletedArtworkScreen> createState() => _CompletedArtworkScreenState();
+  State<CompletedScreen> createState() => _CompletedScreenState();
 }
 
-class _CompletedArtworkScreenState extends State<CompletedArtworkScreen> {
+class _CompletedScreenState extends State<CompletedScreen> {
   final _appService = AppService();
-  List<Artwork> _artworks = [];
+  List<Artwork> _list = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadArtworks();
+    _loadData();
   }
 
   @override
-  void didUpdateWidget(covariant CompletedArtworkScreen oldWidget) {
+  void didUpdateWidget(covariant CompletedScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.refreshRevision != widget.refreshRevision) {
-      _loadArtworks();
+      _loadData();
     }
   }
 
-  Future<void> _loadArtworks() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
     final dataList = await _appService.findByUser(
       widget.userId,
@@ -48,14 +48,14 @@ class _CompletedArtworkScreenState extends State<CompletedArtworkScreen> {
 
     if (!mounted) return;
     setState(() {
-      _artworks = dataList;
+      _list = dataList;
       _isLoading = false;
     });
   }
 
   Future<void> _toggleCompleted(Artwork artwork) async {
     await _appService.toggleCompleted(artwork);
-    await _loadArtworks();
+    await _loadData();
     widget.onDataChanged();
   }
 
@@ -64,8 +64,8 @@ class _CompletedArtworkScreenState extends State<CompletedArtworkScreen> {
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        child: ArtworkList(
-          artworks: _artworks,
+        child: DataList(
+          list: _list,
           isLoading: _isLoading,
           emptyMessage: 'No completed artworks',
           onToggleCompleted: _toggleCompleted,
