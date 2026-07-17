@@ -39,6 +39,7 @@ class AppDatabase extends GeneratedDatabase {
         category TEXT NOT NULL,
         description TEXT NOT NULL,
         completed INTEGER NOT NULL DEFAULT 0,
+        favorite INTEGER NOT NULL DEFAULT 0,
         createdBy INTEGER NOT NULL,
         FOREIGN KEY(createdBy) REFERENCES users(id) ON DELETE CASCADE
       )

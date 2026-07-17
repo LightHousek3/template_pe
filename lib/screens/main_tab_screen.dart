@@ -4,8 +4,8 @@ import '../config/entity_config.dart';
 import '../routes/app_routes.dart';
 import '../services/session_service.dart';
 import 'add_screen.dart';
-import 'completed_screen.dart';
 import 'home_screen.dart';
+import 'summary_screen.dart';
 
 class MainTabScreen extends StatefulWidget {
   const MainTabScreen({super.key});
@@ -53,9 +53,9 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
     if (added != true || !mounted) return;
     _notifyDataChanged();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Artwork added successfully')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Artwork added successfully')));
   }
 
   Future<void> _logout() async {
@@ -74,7 +74,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final titles = ['Home - List', 'Completed ${EntityConfig.entityNamePlural}'];
+    final titles = ['Home - List', 'Summary'];
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +96,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,
           ),
-          CompletedArtworkScreen(
+          SummaryScreen(
             userId: _userId!,
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,
@@ -124,9 +124,9 @@ class _MainTabScreenState extends State<MainTabScreen> {
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.check_circle_outline),
-            selectedIcon: Icon(Icons.check_circle),
-            label: 'Completed',
+            icon: Icon(Icons.bar_chart_outlined),
+            selectedIcon: Icon(Icons.bar_chart),
+            label: 'Summary',
           ),
         ],
       ),
