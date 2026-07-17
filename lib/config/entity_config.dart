@@ -7,6 +7,8 @@ class EntityConfig {
   // Lab5: Item / Items
   static const entityName = 'Artwork';
   static const entityNamePlural = 'Artworks';
+  static const defaultUserId = 1;
+  static const defaultUsername = 'Guest';
 
   // DOI NHANH THEO DE:
   // Lab1: Abstract, Realism, Landscape, Portrait
