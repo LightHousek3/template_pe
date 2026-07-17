@@ -18,7 +18,7 @@ class _AddScreenState extends State<AddScreen> {
   static const _categories = EntityConfig.categories;
 
   final _formKey = GlobalKey<FormState>();
-  final _artworkService = AppService();
+  final _appService = AppService();
   final _sessionService = SessionService();
   final _titleController = TextEditingController();
   final _artistController = TextEditingController();
@@ -70,9 +70,9 @@ class _AddScreenState extends State<AddScreen> {
     );
 
     if (_isEditMode) {
-      await _artworkService.update(artwork);
+      await _appService.update(artwork);
     } else {
-      await _artworkService.add(artwork);
+      await _appService.add(artwork);
     }
 
     if (!mounted) return;

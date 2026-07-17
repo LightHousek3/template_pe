@@ -104,10 +104,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pushReplacementNamed(
-                        context,
-                        AppRoutes.register,
-                      ),
+                      onPressed: () =>
+                          Navigator.pushNamed(context, AppRoutes.register),
                       child: const Text('No account? Register now'),
                     ),
                   ],

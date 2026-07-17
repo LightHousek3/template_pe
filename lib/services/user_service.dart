@@ -23,10 +23,6 @@ class UserService {
   }
 
   Future<int> register(User user) async {
-    if (await isUsernameTaken(user.username)) {
-      throw const UserServiceException('Username already exists');
-    }
-
     final rows = await AppDatabase.instance.readList(AppDatabase.usersKey);
     final id = await AppDatabase.instance.nextId(AppDatabase.userCounterKey);
     rows.add(user.copyWith(id: id).toMap());

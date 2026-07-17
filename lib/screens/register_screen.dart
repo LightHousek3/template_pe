@@ -15,6 +15,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = UserService();
   final _usernameController = TextEditingController();
+  final _ageController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -23,6 +24,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   void dispose() {
     _usernameController.dispose();
+    _ageController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -48,6 +50,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     await _userService.register(
       User(
         username: username,
+        age: int.parse(_ageController.text),
         email: _emailController.text.trim(),
         password: _passwordController.text,
         createdAt: DateTime.now().toIso8601String(),
@@ -98,6 +101,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _usernameController,
                       decoration: const InputDecoration(
                         labelText: 'Username',
+                        prefixIcon: Icon(Icons.person_outline),
+                      ),
+                      validator: _required,
+                    ),
+                    const SizedBox(height: 14),
+                    TextFormField(
+                      controller: _ageController,
+                      decoration: const InputDecoration(
+                        labelText: 'Age',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
                       validator: _required,

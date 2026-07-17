@@ -53,9 +53,9 @@ class _MainTabScreenState extends State<MainTabScreen> {
 
     if (added != true || !mounted) return;
     _notifyDataChanged();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Artwork added successfully')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Artwork added successfully')));
   }
 
   Future<void> _logout() async {
@@ -74,7 +74,10 @@ class _MainTabScreenState extends State<MainTabScreen> {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
-    final titles = ['Home - List', 'Completed ${EntityConfig.entityNamePlural}'];
+    final titles = [
+      'Home - List',
+      'Completed ${EntityConfig.entityNamePlural}',
+    ];
 
     return Scaffold(
       appBar: AppBar(
@@ -96,7 +99,7 @@ class _MainTabScreenState extends State<MainTabScreen> {
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,
           ),
-          CompletedArtworkScreen(
+          CompletedScreen(
             userId: _userId!,
             refreshRevision: _refreshRevision,
             onDataChanged: _notifyDataChanged,

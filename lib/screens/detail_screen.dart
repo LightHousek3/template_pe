@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../models/artwork.dart';
 
-class ArtworkDetailScreen extends StatelessWidget {
-  const ArtworkDetailScreen({super.key, required this.artwork});
+class DetailScreen extends StatelessWidget {
+  const DetailScreen({super.key, required this.artwork});
 
   final Artwork artwork;
 
