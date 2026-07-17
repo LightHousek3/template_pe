@@ -18,7 +18,7 @@ class _AddScreenState extends State<AddScreen> {
   static const _categories = EntityConfig.categories;
 
   final _formKey = GlobalKey<FormState>();
-  final _appService = AppService();
+  final _artworkService = AppService();
   final _sessionService = SessionService();
   final _titleController = TextEditingController();
   final _artistController = TextEditingController();
@@ -50,7 +50,7 @@ class _AddScreenState extends State<AddScreen> {
     super.dispose();
   }
 
-  Future<void> _saveArtwork() async {
+  Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
 
     final userId = await _sessionService.getUserId();
@@ -67,12 +67,13 @@ class _AddScreenState extends State<AddScreen> {
       description: _descriptionController.text.trim(),
       createdBy: widget.artwork?.createdBy ?? userId,
       completed: widget.artwork?.completed ?? false,
+      favorite: widget.artwork?.favorite ?? false,
     );
 
     if (_isEditMode) {
-      await _appService.update(artwork);
+      await _artworkService.update(artwork);
     } else {
-      await _appService.add(artwork);
+      await _artworkService.add(artwork);
     }
 
     if (!mounted) return;
@@ -115,6 +116,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _titleController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4 doi thanh Bill Name, Lab5 doi thanh Item Name.
                         labelText: 'Title',
                         prefixIcon: Icon(Icons.title),
                       ),
@@ -124,6 +126,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _artistController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4/5 co the doi field nay thanh Amount/Price.
                         labelText: 'Artist',
                         prefixIcon: Icon(Icons.person_outline),
                       ),
@@ -133,6 +136,7 @@ class _AddScreenState extends State<AddScreen> {
                     TextFormField(
                       controller: _yearController,
                       decoration: const InputDecoration(
+                        // DOI NHANH: Lab4 doi thanh Due Date, Lab5 co the bo field nay.
                         labelText: 'Year',
                         prefixIcon: Icon(Icons.calendar_today_outlined),
                       ),
@@ -173,7 +177,7 @@ class _AddScreenState extends State<AddScreen> {
                     SizedBox(
                       height: 46,
                       child: ElevatedButton(
-                        onPressed: _isLoading ? null : _saveArtwork,
+                        onPressed: _isLoading ? null : _save,
                         child: Text(
                           _isLoading
                               ? 'Saving...'

@@ -8,6 +8,7 @@ class Artwork {
     required this.description,
     required this.createdBy,
     this.completed = false,
+    this.favorite = false,
   });
 
   final int? id;
@@ -18,6 +19,7 @@ class Artwork {
   final String description;
   final int createdBy;
   final bool completed;
+  final bool favorite;
 
   Artwork copyWith({
     int? id,
@@ -28,6 +30,7 @@ class Artwork {
     String? description,
     int? createdBy,
     bool? completed,
+    bool? favorite,
   }) {
     return Artwork(
       id: id ?? this.id,
@@ -38,6 +41,7 @@ class Artwork {
       description: description ?? this.description,
       createdBy: createdBy ?? this.createdBy,
       completed: completed ?? this.completed,
+      favorite: favorite ?? this.favorite,
     );
   }
 
@@ -51,6 +55,7 @@ class Artwork {
       'description': description,
       'createdBy': createdBy,
       'completed': completed ? 1 : 0,
+      'favorite': favorite ? 1 : 0,
     };
   }
 
@@ -64,6 +69,7 @@ class Artwork {
       description: map['description'] as String,
       createdBy: map['createdBy'] as int,
       completed: (map['completed'] as int? ?? 0) == 1,
+      favorite: (map['favorite'] as int? ?? 0) == 1,
     );
   }
 }
