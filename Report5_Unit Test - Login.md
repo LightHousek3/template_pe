@@ -2,211 +2,103 @@
 
 | Field | Value | Field | Value |
 | --- | --- | --- | --- |
-| Function Code | UT-01 | Function Name | `authService.login(email, password, deviceId)` |
+| Function Code | UT-01 | Function Name | `authService.login(email, password)` |
 | Created By | Pham Hai Dang | Executed By | Codex / Jest (automated) |
-| Lines of code | 40 | Lack of test cases | -14 |
-| Test requirement | Authenticate against the stored account and password hash; allow ACTIVE accounts; resolve the public account and dependency-provided tokens; propagate the expected exceptions. |  |  |
+| Lines of code | 28 | Lack of test cases | -16.2 |
+| Test requirement | Authenticate the supplied email and password; allow ACTIVE accounts; generate a BE session ID; write lastLoginAt and create tokens atomically; return { account, tokens } or reject with the actual exception. |  |  |
 
 | Passed | Failed | Untested | N | A | B | Total Test Cases |
 | --- | --- | --- | --- | --- | --- | --- |
-| 18 | 0 | 0 | 6 | 11 | 1 | 18 |
+| 19 | 0 | 0 | 5 | 12 | 2 | 19 |
 
-## Scope and notation
+## Shared preconditions
 
-The only function under test is `authService.login(email, password, deviceId)` in `src/services/auth.service.js`. Preconditions describe the prepared account records and dependency behavior. Test data contains all three function arguments: `email`, `password`, and `deviceId`.
+The complete setup below is installed unchanged for every test case. Selecting another email selects another record from the same catalogue; it does not change the preconditions. Only `authService.login(email, password)` is the unit under test.
 
-`O` marks an applicable prepared condition or an asserted expected result. A blank cell means that the row does not apply to that case. `P` means that the observed result matched the expectation, including an expected rejection. `N` = Normal, `A` = Abnormal, and `B` = Boundary.
+| Email | Role | Status | Stored password before hashing |
+| --- | --- | --- | --- |
+| `admin@example.com` | `ADMIN` | `ACTIVE` | `"Login123!"` |
+| `owner@example.com` | `FARM_OWNER` | `ACTIVE` | `"Login123!"` |
+| `technician@example.com` | `TECHNICIAN` | `ACTIVE` | `"Login123!"` |
+| `expert@example.com` | `EXPERT` | `ACTIVE` | `"Login123!"` |
+| `short@example.com` | `FARM_OWNER` | `ACTIVE` | `"x"` |
+| `spaces@example.com` | `FARM_OWNER` | `ACTIVE` | `" Login123! "` |
+| `pending@example.com` | `FARM_OWNER` | `PENDING_ACTIVATION` | `null` (no password hash) |
+| `blocked@example.com` | `FARM_OWNER` | `BLOCKED` | `"Login123!"` |
+| `inactive@example.com` | `FARM_OWNER` | `INACTIVE` | `"Login123!"` |
+| `update-error@example.com` | `FARM_OWNER` | `ACTIVE` | `"Login123!"` |
+| `token-error@example.com` | `FARM_OWNER` | `ACTIVE` | `"Login123!"` |
 
-The Return section describes the resolved value. For a rejected promise, Return is left unmarked and the exception is marked under Exception. Exception message values use their exact source constant names; existing runtime strings are not translated.
+All passwords except `null` are hashed with real bcrypt before execution. `missing@example.com` has no record. Account IDs are fixed UUIDs in the shared fixture. Technician and Expert reference the Owner fixture. Initially, every account has `lastLoginAt: null`; pending activation also has `fullName`, `activatedAt`, and `passwordHash` set to `null`. Other accounts are activated and have the same prepared public profile fields.
 
-The agreed main-flow scope excludes concurrent password/status changes, transaction conflicts, and bcrypt byte-limit cases.
+The real service, bcrypt comparison, and UUID generation run. Prisma and `tokenService.generateAuthTokens` are mocked at their dependency boundaries. The same rules apply to every case:
 
-## Preconditions
+- Account lookup returns the record selected by email, or `null` if absent. Lookup of `lookup-error@example.com` rejects with `Error("Account lookup failed")`.
+- The transaction executes the real service callback with a mocked transaction client. Account update normally resolves; updating `update-error@example.com` rejects with `Error("Last login update failed")`.
+- Token generation normally resolves to `{ accessToken: "fixture-access-token", refreshToken: "fixture-refresh-token" }`; for `token-error@example.com`, it rejects with `Error("Token generation failed")`.
+- Every case starts with reset mocks. No live database is used in these unit tests.
 
-The real `login` function and real bcrypt comparisons are used. Prisma is mocked at the data-access boundary. `tokenService.generateAuthTokens` is mocked as a dependency of `login`; its token implementation is not a separate unit under test. No live database connection is used.
+`email` and `password` are the complete function arguments. The BE creates `deviceId` internally; it is not a test parameter. The Return value is `{ account, tokens }`: `account` excludes `passwordHash` and contains the written `lastLoginAt`; `tokens` is the exact dependency-provided object.
 
-All found accounts use the following base fixture. The account role, status, and stored password hash are selected by the precondition rows in the matrix.
+## Unit test matrix
 
-```javascript
-const ACCOUNT_ID = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
-const OWNER_ID = "22222222-2222-4222-8222-222222222222";
-const EMAIL = "login@example.com";
+`O` marks the applicable input or expected outcome. Every precondition row is common to all columns. A blank Return cell means that the promise rejects. `P` means the actual outcome matched the expectation, including an expected exception. Exception rows contain literal error messages. No exception is expected in successful cases.
 
-const account = {
-  id: ACCOUNT_ID,
-  email: EMAIL,
-  phone: null,
-  passwordHash: STORED_HASH,
-  fullName: "Login Test",
-  avatarUrl: null,
-  role: ROLE,
-  status: STATUS,
-  managedByOwnerId: ["TECHNICIAN", "EXPERT"].includes(ROLE) ? OWNER_ID : null,
-  activatedAt: new Date("2026-01-01T00:00:00Z"),
-  lastLoginAt: null,
-  createdAt: new Date("2026-01-01T00:00:00Z"),
-  updatedAt: new Date("2026-01-02T00:00:00Z"),
-};
-```
-
-For the pending-activation fixture, `passwordHash`, `fullName`, and `activatedAt` are all `null`. This fixture reaches the invalid-credentials rejection before any account-status error is evaluated.
-
-For successful authentication and the token-dependency failure case, the account re-read returns the same account and the account update resolves to `{ count: 1 }`.
-
-Dependency fixtures:
-
-```javascript
-const TOKENS = {
-  "accessToken": "fixture-access-token",
-  "refreshToken": "fixture-refresh-token"
-};
-const LOOKUP_ERROR = new Error("Account lookup failed");
-const TOKEN_ERROR = new Error("Token generation failed");
-const GENERATED_DEVICE_ID = "33333333-3333-4333-8333-333333333333";
-```
-
-`generateAuthTokens` resolves to `TOKENS` in successful cases. For UTCID18, it rejects with the same `TOKEN_ERROR` instance. For UTCID17, the initial account lookup rejects with the same `LOOKUP_ERROR` instance. UUID generation is controlled to return `GENERATED_DEVICE_ID` when the third argument is `undefined`.
-
-## Expected return value
-
-In successful cases, the promise resolves to the following complete object. `ROLE` is the account role selected in Preconditions. `T` is the `Date` created by `login` and written to `lastLoginAt`; the test asserts that the returned value uses that same timestamp. `TOKENS` is the exact dependency-provided object defined above.
-
-```javascript
-{
-  account: {
-    id: ACCOUNT_ID,
-    email: EMAIL,
-    phone: null,
-    fullName: "Login Test",
-    avatarUrl: null,
-    role: ROLE,
-    status: "ACTIVE",
-    managedByOwnerId: ["TECHNICIAN", "EXPERT"].includes(ROLE) ? OWNER_ID : null,
-    activatedAt: new Date("2026-01-01T00:00:00Z"),
-    lastLoginAt: T,
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-02T00:00:00Z"),
-  },
-  tokens: TOKENS,
-}
-```
-
-`passwordHash` is absent from the returned account.
-
-## Condition / Confirm / Result
-
-### UTCID01-UTCID09
-
-| Section | Item | Condition / expected result | UTCID01 | UTCID02 | UTCID03 | UTCID04 | UTCID05 | UTCID06 | UTCID07 | UTCID08 | UTCID09 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Condition | Precondition |  |  |  |  |  |  |  |  |  |  |
-|  |  | Real login function; mocked Prisma delegates; real bcrypt comparisons. | O | O | O | O | O | O | O | O | O |
-|  |  | Initial account lookup resolves to an account. | O | O | O | O | O | O |  | O | O |
-|  |  | Initial account lookup resolves to null. |  |  |  |  |  |  | O |  |  |
-|  |  | Stored account role = `ADMIN`. | O |  |  |  |  |  |  |  |  |
-|  |  | Stored account role = `FARM_OWNER`. |  | O |  |  | O | O |  | O | O |
-|  |  | Stored account role = `TECHNICIAN`. |  |  | O |  |  |  |  |  |  |
-|  |  | Stored account role = `EXPERT`. |  |  |  | O |  |  |  |  |  |
-|  |  | Stored account status = `ACTIVE`. | O | O | O | O | O | O |  | O |  |
-|  |  | Stored account status = `PENDING_ACTIVATION`. |  |  |  |  |  |  |  |  | O |
-|  |  | Stored passwordHash is a real bcrypt hash of `"Login123!"`. | O | O | O | O | O | O |  | O |  |
-|  |  | Stored passwordHash, fullName, and activatedAt are null. |  |  |  |  |  |  |  |  | O |
-|  |  | Account re-read returns the same account; update resolves to { count: 1 }. | O | O | O | O | O |  |  |  |  |
-|  |  | generateAuthTokens resolves to TOKENS. | O | O | O | O | O |  |  |  |  |
-|  | Test data: email |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"login@example.com"` | O | O | O | O | O | O | O | O | O |
-|  | Test data: password |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"Login123!"` | O | O | O | O | O |  | O |  | O |
-|  |  | `""` |  |  |  |  |  | O |  |  |  |
-|  |  | `"Wrong123!"` |  |  |  |  |  |  |  | O |  |
-|  | Test data: deviceId |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"11111111-1111-4111-8111-111111111111"` | O | O | O | O |  | O | O | O | O |
-|  |  | `undefined` |  |  |  |  | O |  |  |  |  |
-| Confirm | Return |  |  |  |  |  |  |  |  |  |  |
-|  |  | Resolve the exact { account, tokens } object defined in Expected return value. | O | O | O | O | O |  |  |  |  |
-|  | Exception |  |  |  |  |  |  |  |  |  |  |
-|  |  | Reject ApiError: statusCode = 401; message = messages.AUTH.INVALID_CREDENTIALS; no errorCode property. |  |  |  |  |  | O | O | O | O |
-| Result | Type (N / A / B) |  | N | N | N | N | N | B | A | A | A |
-|  | Passed/Failed |  | P | P | P | P | P | P | P | P | P |
-|  | Executed Date |  | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 |
-|  | Defect ID |  | - | - | - | - | - | - | - | - | - |
-
-### UTCID10-UTCID18
-
-| Section | Item | Condition / expected result | UTCID10 | UTCID11 | UTCID12 | UTCID13 | UTCID14 | UTCID15 | UTCID16 | UTCID17 | UTCID18 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Condition | Precondition |  |  |  |  |  |  |  |  |  |  |
-|  |  | Real login function; mocked Prisma delegates; real bcrypt comparisons. | O | O | O | O | O | O | O | O | O |
-|  |  | Initial account lookup resolves to an account. | O | O | O | O | O | O | O |  | O |
-|  |  | Initial account lookup rejects with LOOKUP_ERROR. |  |  |  |  |  |  |  | O |  |
-|  |  | Stored account role = `FARM_OWNER`. | O | O | O | O | O | O | O |  | O |
-|  |  | Stored account status = `ACTIVE`. |  |  |  |  | O | O | O |  | O |
-|  |  | Stored account status = `BLOCKED`. | O |  | O |  |  |  |  |  |  |
-|  |  | Stored account status = `INACTIVE`. |  | O |  | O |  |  |  |  |  |
-|  |  | Stored passwordHash is a real bcrypt hash of `"Login123!"`. | O | O | O | O | O | O |  |  | O |
-|  |  | Stored passwordHash is a real bcrypt hash of `" Login123! "`. |  |  |  |  |  |  | O |  |  |
-|  |  | Account re-read returns the same account; update resolves to { count: 1 }. |  |  |  |  |  |  | O |  | O |
-|  |  | generateAuthTokens resolves to TOKENS. |  |  |  |  |  |  | O |  |  |
-|  |  | generateAuthTokens rejects with TOKEN_ERROR. |  |  |  |  |  |  |  |  | O |
-|  | Test data: email |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"login@example.com"` | O | O | O | O | O | O | O | O | O |
-|  | Test data: password |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"Login123!"` | O | O |  |  |  |  |  | O | O |
-|  |  | `"Wrong123!"` |  |  | O | O |  |  |  |  |  |
-|  |  | `"login123!"` |  |  |  |  | O |  |  |  |  |
-|  |  | `" Login123! "` |  |  |  |  |  | O | O |  |  |
-|  | Test data: deviceId |  |  |  |  |  |  |  |  |  |  |
-|  |  | `"11111111-1111-4111-8111-111111111111"` | O | O | O | O | O | O | O | O | O |
-| Confirm | Return |  |  |  |  |  |  |  |  |  |  |
-|  |  | Resolve the exact { account, tokens } object defined in Expected return value. |  |  |  |  |  |  | O |  |  |
-|  | Exception |  |  |  |  |  |  |  |  |  |  |
-|  |  | Reject ApiError: statusCode = 401; message = messages.AUTH.INVALID_CREDENTIALS; no errorCode property. |  |  | O | O | O | O |  |  |  |
-|  |  | Reject ApiError: statusCode = 403; message = messages.AUTH.ACCOUNT_BLOCKED; errorCode = AUTH_ACCOUNT_BLOCKED. | O |  |  |  |  |  |  |  |  |
-|  |  | Reject ApiError: statusCode = 403; message = messages.AUTH.ACCOUNT_INACTIVE; errorCode = AUTH_ACCOUNT_INACTIVE. |  | O |  |  |  |  |  |  |  |
-|  |  | Reject with the original LOOKUP_ERROR instance: Error("Account lookup failed"). |  |  |  |  |  |  |  | O |  |
-|  |  | Reject with the original TOKEN_ERROR instance: Error("Token generation failed"). |  |  |  |  |  |  |  |  | O |
-| Result | Type (N / A / B) |  | A | A | A | A | A | A | N | A | A |
-|  | Passed/Failed |  | P | P | P | P | P | P | P | P | P |
-|  | Executed Date |  | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 |
-|  | Defect ID |  | - | - | - | - | - | - | - | - | - |
-
-## Case register
-
-All three function parameters are specified for every case, including the explicit `undefined` value in UTCID05.
-
-| Case | Scenario | email | password | deviceId |
-| --- | --- | --- | --- | --- |
-| UTCID01 | Active Admin with matching credentials | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID02 | Active Farm Owner with matching credentials | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID03 | Active Technician with matching credentials | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID04 | Active Expert with matching credentials | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID05 | Undefined deviceId uses a generated UUID | `"login@example.com"` | `"Login123!"` | `undefined` |
-| UTCID06 | Empty password does not match the stored password | `"login@example.com"` | `""` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID07 | Account does not exist | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID08 | Incorrect password | `"login@example.com"` | `"Wrong123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID09 | Pending account has no stored password hash | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID10 | Blocked account with matching password | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID11 | Inactive account with matching password | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID12 | Blocked account with incorrect password | `"login@example.com"` | `"Wrong123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID13 | Inactive account with incorrect password | `"login@example.com"` | `"Wrong123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID14 | Password case differs from the stored password | `"login@example.com"` | `"login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID15 | Extra password spaces do not match the stored password | `"login@example.com"` | `" Login123! "` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID16 | Matching password containing spaces is preserved | `"login@example.com"` | `" Login123! "` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID17 | Account lookup rejects | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-| UTCID18 | Token generation dependency rejects | `"login@example.com"` | `"Login123!"` | `"11111111-1111-4111-8111-111111111111"` |
-
-UTCID06 is the zero-character boundary case for the password argument against a non-empty stored secret. It verifies the credential mismatch; it does not assert a password-creation length rule.
+| Section | Item | UTCID01 | UTCID02 | UTCID03 | UTCID04 | UTCID05 | UTCID06 | UTCID07 | UTCID08 | UTCID09 | UTCID10 | UTCID11 | UTCID12 | UTCID13 | UTCID14 | UTCID15 | UTCID16 | UTCID17 | UTCID18 | UTCID19 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  | Scenario | Active Admin with matching credentials | Active Farm Owner with matching credentials | Active Technician with matching credentials | Active Expert with matching credentials | One-character password matches the stored password | Empty password does not match the stored password | Account does not exist | Incorrect password | Pending account has no stored password hash | Blocked account with matching password | Inactive account with matching password | Blocked account with incorrect password | Inactive account with incorrect password | Password case differs from the stored password | Extra password spaces do not match the stored password | Matching password containing spaces is preserved | Account lookup dependency rejects | Last-login update dependency rejects | Token generation dependency rejects |
+| Condition | Precondition: the complete shared account catalogue is prepared | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
+|  | Precondition: real bcrypt comparison and UUID generation are available | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
+|  | Precondition: the shared Prisma and token dependency rules are installed | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
+|  | Precondition: mocks are reset; no live database is used | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
+|  | **Email** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"admin@example.com"` | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"owner@example.com"` |  | O |  |  |  | O |  | O |  |  |  |  |  | O | O |  |  |  |  |
+|  | `"technician@example.com"` |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"expert@example.com"` |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"short@example.com"` |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"missing@example.com"` |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"pending@example.com"` |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |
+|  | `"blocked@example.com"` |  |  |  |  |  |  |  |  |  | O |  | O |  |  |  |  |  |  |  |
+|  | `"inactive@example.com"` |  |  |  |  |  |  |  |  |  |  | O |  | O |  |  |  |  |  |  |
+|  | `"spaces@example.com"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |
+|  | `"lookup-error@example.com"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |
+|  | `"update-error@example.com"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |
+|  | `"token-error@example.com"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |
+|  | **Password** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"Login123!"` | O | O | O | O |  |  | O |  | O | O | O |  |  |  |  |  | O | O | O |
+|  | `"x"` |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `""` |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"Wrong123!"` |  |  |  |  |  |  |  | O |  |  |  | O | O |  |  |  |  |  |  |
+|  | `"login123!"` |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |
+|  | `" Login123! "` |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O | O |  |  |  |
+| Confirm | **Return**: `{ account, tokens }` | O | O | O | O | O |  |  |  |  |  |  |  |  |  |  | O |  |  |  |
+|  | **Exception** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+|  | `"Email or password is incorrect"` |  |  |  |  |  | O | O | O | O |  |  | O | O | O | O |  |  |  |  |
+|  | `"Your account has been blocked. Please contact support"` |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |
+|  | `"Your account is inactive. Please contact support"` |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |
+|  | `"Account lookup failed"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |
+|  | `"Last login update failed"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |
+|  | `"Token generation failed"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |
+| Result | Type (N: Normal, A: Abnormal, B: Boundary) | N | N | N | N | B | B | A | A | A | A | A | A | A | A | A | N | A | A | A |
+|  | Passed/Failed | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P |
+|  | Executed Date | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 | 2026-11-09 |
+|  | Defect ID |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
 
 ## Execution evidence
 
-Executed at 2026-11-09 22:48:46 (Asia/Saigon). Only `tests/login.service.test.js` was selected. Result: **18 passed, 0 failed, 0 skipped; 1 suite**.
+Executed on 2026-11-09 at 23:16:38 (Asia/Ho_Chi_Minh). Jest reported **19 passed, 0 failed, 0 untested** for the single service unit suite. The matrix and counts above were generated only after matching every case ID and title against that execution result.
 
-The tests assert the complete resolved object, passwordHash removal, exact exception type and fields or dependency-error identity, and the account/token dependency calls made by login. No runtime token-format or token-storage tests are included in these counts.
+From `smartshrimp_be`, run:
 
 ```powershell
-node node_modules/jest/bin/jest.js --runInBand --runTestsByPath tests/login.service.test.js --json --outputFile=../.tmp/report5-login-service-20261109/results.json
+node node_modules/jest/bin/jest.js --runInBand --runTestsByPath tests/login.service.test.js
 ```
 
-Source: `src/services/auth.service.js`, lines 39-83. LOC counts nonblank, non-comment lines in this function. The template's density formula is preserved: `LOC * 100 / 1000 - Total Test Cases` = 40 * 100 / 1000 - 18 = -14. A negative value indicates cases above the inherited 100-cases/KLOC norm; it is not a branch-coverage measure.
+Credential rejections use `ApiError` 401; matching credentials for blocked or inactive accounts use `ApiError` 403. The pending account has no password hash, so it returns the same invalid-credentials message as an unknown account. Dependency errors are controlled test fixtures and propagate unchanged; their literal messages are not additional Login business messages.
 
-Defect ID is "-" because all listed cases matched their expected results. Execution results are recorded in `.tmp/report5-login-service-20261109/results.json`.
+The two B cases exercise zero- and one-character password inputs against the prepared hashes. They do not claim that this service enforces password length. Concurrency changes, transaction conflict/retry scenarios, and bcrypt byte-limit scenarios are outside the agreed scope. Unknown account statuses are excluded because the database enum does not permit them.
+
+Lines of code counts nonblank, noncomment lines in the Login function, including its declaration and closing line. Lack of test cases preserves the supplied template calculation: `(Lines of code * 100 / 1000) - Total Test Cases`; a negative value is the formula result, not a missing-case count.
+
+Sources: [service](smartshrimp_be/src/services/auth.service.js), [unit tests](smartshrimp_be/tests/login.service.test.js), [shared fixtures and cases](smartshrimp_be/tests/support/loginServiceCases.cjs).
