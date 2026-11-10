@@ -1,95 +1,61 @@
-# Report 5 - ResetPassword Service Unit Test
+# Report 5 - Forgot Password (ResetPassword Service)
 
 | Field | Value | Field | Value |
 | --- | --- | --- | --- |
-| Function Code | UT-02 | Function Name | `verificationService.resetPassword({ actionToken, password })` |
-| Created By | Pham Hai Dang | Executed By | Codex / Jest (automated) |
-| Lines of code | 1 (exported wrapper; real shared implementation exercised) | Lack of test cases | Not calculated (KLOC norm not specified) |
-| Test requirement | Check reset tokens and account eligibility; consume the token once; replace the password; invalidate remaining challenges; revoke all account refresh tokens; resolve to undefined. |  |  |
+| Function Code | UT-03 | Function Name | `verificationService.resetPassword({ actionToken, password })` |
+| Created By | Pham Hai Dang | Executed By | Pham Hai Dang |
+| Lines of code | 58 | Lack of test cases | -1.2 |
+| Test requirement | Complete a valid reset; reject unknown, used or expired tokens and blocked/inactive accounts; consume the token and revoke existing sessions. |  |  |
 
 | Passed | Failed | Untested | N | A | B | Total Test Cases |
 | --- | --- | --- | --- | --- | --- | --- |
-| 21 | 0 | 0 | 5 | 14 | 2 | 21 |
+| 7 | 0 | 0 | 1 | 5 | 1 | 7 |
 
-Only `verificationService.resetPassword` is called. Its shared password-reset implementation and policy checks run unchanged. All cases use one prepared catalogue. `O` marks the selected condition, input or expected outcome; `P` means passed. A blank Return cell means the function rejects.
+Unit: `verificationService.resetPassword({ actionToken, password })`, the completion step of Forgot Password. `O` selects a condition, input or expected result; `P` means passed. Password is fixed for every case; no password-variation cases are included.
 
-Exception rows are **English descriptions**, not replacement runtime messages. The BE messages remain Vietnamese, and the executed tests assert those exact original strings, error codes and status codes.
+| Section | Item | UTCID01 | UTCID02 | UTCID03 | UTCID04 | UTCID05 | UTCID06 | UTCID07 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+|  | Scenario | Complete a valid password reset | Action token does not exist | Action token has already been used | Action token has reached its expiry time | Account is blocked | Account is inactive | Action token has one valid millisecond remaining |
+| Condition | **Precondition** |  |  |  |  |  |  |  |
+|  | Can connect with server | O | O | O | O | O | O | O |
+|  | Token service is available | O | O | O | O | O | O | O |
+|  | Account status = "ACTIVE" | O |  | O | O |  |  | O |
+|  | Account status = "BLOCKED" |  |  |  |  | O |  |  |
+|  | Account status = "INACTIVE" |  |  |  |  |  | O |  |
+|  | **Action token** |  |  |  |  |  |  |  |
+|  | `actionToken_valid = "tok_valid"` | O |  |  |  |  |  |  |
+|  | `actionToken_not_found = "tok_missing"` |  | O |  |  |  |  |  |
+|  | `actionToken_consumed = "tok_used"` |  |  | O |  |  |  |  |
+|  | `actionToken_expired = "tok_expired"` |  |  |  | O |  |  |  |
+|  | `actionToken_blocked = "tok_blocked"` |  |  |  |  | O |  |  |
+|  | `actionToken_inactive = "tok_inactive"` |  |  |  |  |  | O |  |
+|  | `actionToken_last_valid_ms = "tok_last_ms"` |  |  |  |  |  |  | O |
+|  | **Password** |  |  |  |  |  |  |  |
+|  | `password_valid = "ResetPass456!"` | O | O | O | O | O | O | O |
+| Confirm | **Return**: `undefined` | O |  |  |  |  |  | O |
+|  | **Exception (English description of the unchanged runtime error)** |  |  |  |  |  |  |  |
+|  | The verification session is invalid or has expired |  | O | O | O |  |  |  |
+|  | Your account has been blocked. Please contact support |  |  |  |  | O |  |  |
+|  | Your account is inactive. Please contact support |  |  |  |  |  | O |  |
+| Result | Type (N: Normal, A: Abnormal, B: Boundary) | N | A | A | A | A | A | B |
+|  | Passed/Failed | P | P | P | P | P | P | P |
+|  | Executed Date | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 |
+|  | Defect ID |  |  |  |  |  |  |  |
 
-| Section | Item | UTCID01 | UTCID02 | UTCID03 | UTCID04 | UTCID05 | UTCID06 | UTCID07 | UTCID08 | UTCID09 | UTCID10 | UTCID11 | UTCID12 | UTCID13 | UTCID14 | UTCID15 | UTCID16 | UTCID17 | UTCID18 | UTCID19 | UTCID20 | UTCID21 |
-| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-|  | Scenario | Reset an active Farm Owner password | Reset an active Technician password | Reset an active Expert password | New password equals the current password (allowed by the function) | Preserve spaces in the new password | Action token does not exist | Action token belongs to account activation | Action token has already been used | Action token has been superseded | Action token expired one millisecond ago | Action token expiry equals the current time | Action token has one valid millisecond remaining | Action token belongs to an unsupported Admin account | Account is blocked | Account is inactive | Account is pending activation | Action token cannot be consumed by the conditional update | Account no longer matches the reset update conditions | Action token expires at the final check after password hashing | Expired action token stays generic for a blocked account | Used action token stays generic for an inactive account |
-| Condition | **Precondition** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Can connect with server | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
-|  | Token service is available and revokes all account refresh tokens successfully | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
-|  | Current time is fixed at "2026-11-10T00:00:00.000Z" | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
-|  | Account status = "ACTIVE" | O | O | O | O | O |  |  | O | O | O | O | O | O |  |  |  | O | O | O |  |  |
-|  | Account status = "BLOCKED" |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  | O |  |
-|  | Account status = "INACTIVE" |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  | O |
-|  | Account status = "PENDING_ACTIVATION" |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  | O |  |  |  |  |  |
-|  | Account role = "FARM_OWNER" | O |  |  | O | O |  | O | O | O | O | O | O |  | O | O | O | O | O | O | O | O |
-|  | Account role = "TECHNICIAN" |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Account role = "EXPERT" |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Account role = "ADMIN" |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |
-|  | Action token purpose = "PASSWORD_RESET" | O | O | O | O | O |  |  | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
-|  | Action token purpose = "ACCOUNT_ACTIVATION" |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Action token is verified and has not expired | O | O | O | O | O |  | O |  |  |  |  |  | O | O | O | O | O | O |  |  |  |
-|  | Action token does not exist |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Action token has already been used |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  | O |
-|  | Action token has been superseded |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | Action token expiry = current time - 1 ms |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  | O |  |
-|  | Action token expiry = current time |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |
-|  | Action token expiry = current time + 1 ms |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  | O |  |  |
-|  | Action token expires before the final check after password hashing |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |
-|  | Action token cannot be consumed by the conditional update |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |
-|  | Account no longer matches the password-reset update conditions |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |
-|  | **Action token** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_valid_owner = "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE"` | O |  |  | O | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_valid_technician = "AgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgI"` |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_valid_expert = "AwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwM"` |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_not_found = "-vr6-vr6-vr6-vr6-vr6-vr6-vr6-vr6-vr6-vr6-vo"` |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_wrong_purpose = "BAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQ"` |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_consumed = "BQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQU"` |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_superseded = "BgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgYGBgY"` |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_expired = "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc"` |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_expires_now = "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg"` |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_last_valid_ms = "CQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQk"` |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |
-|  | `actionToken_unsupported_role = "CgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgo"` |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |
-|  | `actionToken_blocked = "CwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCws"` |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |
-|  | `actionToken_inactive = "DAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |
-|  | `actionToken_pending = "DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |
-|  | `actionToken_not_consumable = "Dg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4ODg4"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |
-|  | `actionToken_account_update_not_matched = "Dw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8PDw8"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |
-|  | `actionToken_expires_during_reset = "EBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBA"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |
-|  | `actionToken_blocked_expired = "ERERERERERERERERERERERERERERERERERERERERERE"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |
-|  | `actionToken_inactive_consumed = "EhISEhISEhISEhISEhISEhISEhISEhISEhISEhISEhI"` |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |
-|  | **Password** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `password_new = "ResetPass456!"` | O | O | O |  |  | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O | O |
-|  | `password_current = "CurrentPass123!"` |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | `password_with_spaces = " ResetPass456! "` |  |  |  |  | O |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-| Confirm | **Return**: `undefined` | O | O | O | O | O |  |  |  |  |  |  | O |  |  |  |  |  |  |  |  |  |
-|  | **Exception (English description of the unchanged runtime error)** |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
-|  | The verification session is invalid or has expired |  |  |  |  |  | O | O | O | O | O | O |  | O |  |  |  | O |  | O | O | O |
-|  | Your account has been blocked. Please contact support |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |  |
-|  | Your account is inactive. Please contact support |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |  |
-|  | Account has not been activated. Please activate your account first |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |  |  |
-|  | The verification request is being processed. Please try again |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  | O |  |  |  |
-| Result | Type (N: Normal, A: Abnormal, B: Boundary) | N | N | N | N | N | A | A | A | A | A | A | B | A | A | A | A | A | A | B | A | A |
-|  | Passed/Failed | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P | P |
-|  | Executed Date | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 | 2026-11-10 |
-|  | Defect ID |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |  |
+All prepared accounts are Farm Owners. Test time is fixed at 2026-11-10T00:00:00.000Z: tok_expired expires at that instant (A); tok_last_ms expires 1 ms later (B). Short token strings are the exact synthetic inputs used by these service tests; token-format validation is outside this unit.
 
-The B cases start at the last valid millisecond before token expiry. One completes with time held fixed; the other reaches expiry before the final token check and must reject. Tokens already at or past expiry are A. Password-length rules belong to validation and are not classified as service boundaries.
+Exception rows are English descriptions of unchanged Vietnamese runtime messages. Tests assert the exact runtime messages, status codes and error codes. Successful cases verify the password update, token consumption, challenge invalidation and awaited session revocation using the same transaction client. Server availability is assumed; database and token-service boundaries are mocked.
 
-Successful cases also verify the stored password, one-time token consumption, invalidation of remaining challenges, and all-session revocation with the same transaction client. Reset must wait for revocation to complete. The function returns no account, token or success-message payload.
+Scope: selected main-flow cases. Password variations, other roles/purposes, pending activation, superseded tokens, concurrent updates and expiry during processing are outside this report. This is not exhaustive branch coverage.
 
-The unchanged implementation permits the new password to equal the current password and preserves password spaces. The zero-match conditional updates are explicit checks in this function; no database, email or token-service exceptions are injected.
-
-Server availability is an assumed precondition. Database and token-service boundaries are mocked. Only SQL-permitted account and challenge states are prepared; impossible stored records are not fabricated to exercise defensive guards.
-
-Executed on 2026-11-10 at 03:28:39 (Asia/Ho_Chi_Minh): **21 passed, 0 failed, 0 untested**. Every matrix column was matched to its executed Jest case.
+Executed on 2026-11-10 at 15:49:57 (Asia/Ho_Chi_Minh): **7 passed, 0 failed, 0 untested**. Every matrix column was matched to its executed Jest case.
 
 ```powershell
 node node_modules/jest/bin/jest.js --runInBand --runTestsByPath tests/resetPassword.service.test.js
 ```
+
+Lines of code = 58: nonblank, noncomment physical lines of completeVerification in verification.service.js (lines 138-196), including its declaration and braces. This is the real business implementation reached through the one-line resetPassword export. The shared function also contains activation code; only its PASSWORD_RESET flow is tested here. Helpers and external libraries are not added recursively.
+
+The supplied workbook maps Forgot Password to UT-03 at Functions!E13 and has 100 test cases/KLOC at Functions!E6. Its Login!L4 formula is LOC * norm / 1000 - total cases. Lack of test cases = 58 * 100 / 1000 - 7 = -1.2. Negative and fractional results are preserved; this density measure does not establish branch coverage.
 
 Sources: [service](smartshrimp_be/src/services/verification.service.js), [unit tests](smartshrimp_be/tests/resetPassword.service.test.js), [fixtures and expected runtime messages](smartshrimp_be/tests/support/resetPasswordServiceCases.cjs).
